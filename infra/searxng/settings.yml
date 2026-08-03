@@ -1,10 +1,20 @@
-use_default_settings: true
+use_default_settings:
+  engines:
+    keep_only:
+      - bing
+      - brave
+      - mojeek
+      - qwant
+      - startpage
 
 general:
   instance_name: "Quill search"
 
 search:
   safe_search: 1
+  default_lang: en
+  ban_time_on_fail: 1
+  max_ban_time_on_fail: 30
   formats:
     - html
     - json
@@ -13,3 +23,11 @@ server:
   secret_key: "ultrasecretkey"
   limiter: false
   image_proxy: false
+
+engines:
+  - name: bing
+    disabled: false
+  - name: mojeek
+    disabled: false
+  - name: qwant
+    disabled: false

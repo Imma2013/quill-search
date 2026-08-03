@@ -39,7 +39,7 @@ async function searchSearxng(query, baseUrl) {
   url.searchParams.set('language', 'en');
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
+  const timeout = setTimeout(() => controller.abort(), 12000);
   try {
     const response = await fetch(url, { signal: controller.signal, headers: { Accept: 'application/json' } });
     if (!response.ok) throw new Error(`SearXNG returned ${response.status}.`);
