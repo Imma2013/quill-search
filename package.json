@@ -1,0 +1,18 @@
+{
+  "name": "quill",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace @quill/web",
+    "dev:api": "npm run dev --workspace @quill/api",
+    "build": "npm run build --workspace @quill/web",
+    "start:api": "npm run start --workspace @quill/api",
+    "convex:dev": "npx convex dev"
+  },
+  "devDependencies": {
+    "convex": "^1.43.0"
+  }
+}
