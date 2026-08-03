@@ -56,7 +56,7 @@ function prompts(query: string, sources: any[], quotes: any[]) {
 async function generateArticle(query: string, sources: any[], quotes: any[]) {
   const { system, user } = prompts(query, sources, quotes);
   const errors = [];
-  for (const model of [...new Set([PRIMARY_MODEL, FALLBACK_MODEL])]) {
+  for (const model of [PRIMARY_MODEL, FALLBACK_MODEL].filter((v, i, a) => a.indexOf(v) === i)) {
     try {
       const { content, modelUsed } = await createArticleCompletion(system, user, model);
       return { article: validateArticle(content, sources, quotes), modelUsed };
