@@ -5,8 +5,7 @@ require('dotenv').config();
 const { fallbackArticle, validateArticle } = require('./article');
 const cache = require('./cache');
 const { optionalUser } = require('./auth');
-const { extractDomain, extractPage, fallbackFavicon, isSafePublicUrl, rankQuotes, searchSearxng, searchFirecrawl } = require('./source');
-const { queryDuckDuckGoMcp, extractWithPlaywright } = require('./fallbacks');
+const { fallbackFavicon, rankQuotes, searchFirecrawl } = require('./source');
 const { FALLBACK_MODEL, PRIMARY_MODEL, createArticleCompletion } = require('./openrouter');
 const { readCache, saveSearch } = require('./persistence');
 const { consume } = require('./rate-limit');
@@ -30,8 +29,7 @@ app.get('/health', (_request, response) => {
     articleContract: articleCacheVersion,
     openRouterConfigured: Boolean(process.env.OPENROUTER_API_KEY),
     searxngConfigured: Boolean(process.env.SEARXNG_URL),
-    duckDuckGoFallbackConfigured: Boolean(process.env.DDG_MCP_SEARCH_URL),
-    playwrightFallbackConfigured: Boolean(process.env.PLAYWRIGHT_EXTRACTOR_URL),
+    firecrawlConfigured: Boolean(process.env.FIRECRAWL_API_KEY),
   });
 });
 
