@@ -13,8 +13,7 @@ RUN apt-get update \
 RUN git clone --depth 1 https://github.com/searxng/searxng.git /opt/searxng \
   && python3 -m venv /opt/searxng/.venv \
   && /opt/searxng/.venv/bin/pip install --no-cache-dir --upgrade pip \
-  && /opt/searxng/.venv/bin/pip install --no-cache-dir -r /opt/searxng/requirements.txt gunicorn \
-  && /opt/searxng/.venv/bin/pip install --no-cache-dir /opt/searxng
+  && /opt/searxng/.venv/bin/pip install --no-cache-dir -r /opt/searxng/requirements.txt gunicorn
 
 WORKDIR /opt/quill
 
