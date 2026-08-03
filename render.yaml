@@ -1,17 +1,19 @@
 services:
   - type: web
     name: quill-api
-    env: node
+    env: docker
     region: oregon
-    rootDir: apps/api
-    buildCommand: npm install
-    startCommand: npm start
+    plan: free
     healthCheckPath: /health
     envVars:
       - key: OPENROUTER_API_KEY
         sync: false
       - key: SEARXNG_URL
-        sync: false
+        value: http://127.0.0.1:8080
+      - key: SEARXNG_SECRET
+        generateValue: true
+      - key: SEARXNG_LIMITER
+        value: "false"
       - key: ALLOWED_ORIGIN
         sync: false
       - key: CONVEX_URL
@@ -24,14 +26,3 @@ services:
         sync: false
       - key: FIREBASE_PRIVATE_KEY
         sync: false
-  - type: pserv
-    name: quill-searx
-    env: docker
-    region: oregon
-    plan: starter
-    rootDir: infra/searxng
-    envVars:
-      - key: SEARXNG_SECRET
-        generateValue: true
-      - key: SEARXNG_LIMITER
-        value: "false"
