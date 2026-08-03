@@ -1,23 +1,41 @@
-import { NextRequest } from 'next/server';
-import { fallbackArticle, validateArticle } from '@/lib/backend/article';
-import cache from '@/lib/backend/cache';
-import { optionalUser } from '@/lib/backend/auth';
-import { fallbackFavicon, rankQuotes, searchFirecrawl } from '@/lib/backend/source';
-import { FALLBACK_MODEL, PRIMARY_MODEL, createArticleCompletion } from '@/lib/backend/openrouter';
-import { readCache, saveSearch } from '@/lib/backend/persistence';
-import { consume } from '@/lib/backend/rate-limit';
+const cors = require('cors');
+const express = require('express');
+require('dotenv').config();
 
-export const runtime = 'nodejs';
-export const maxDuration = 60; // Set Vercel execution time limit to 60 seconds (Hobby Max)
+const { fallbackArticle, validateArticle } = require('./article');
+const cache = require('./cache');
+const { optionalUser } = require('./auth');
+const { fallbackFavicon, rankQuotes, searchFirecrawl } = require('./source');
+const { FALLBACK_MODEL, PRIMARY_MODEL, createArticleCompletion } = require('./openrouter');
+const { readCache, saveSearch } = require('./persistence');
+const { consume } = require('./rate-limit');
 
+const app = express();
+const port = Number(process.env.PORT || 10000);
 const cacheTtlMs = Number(process.env.SEARCH_CACHE_TTL_MS || 21600000);
 const rateLimit = Number(process.env.SEARCH_RATE_LIMIT || 12);
 const rateWindowMs = Number(process.env.SEARCH_RATE_WINDOW_MS || 3600000);
+const allowedOrigins = process.env.ALLOWED_ORIGIN?.split(',').map(origin => origin.trim()).filter(Boolean);
 const articleCacheVersion = 'article-v3';
 
-function sourceCards(pages: any[], quotes: any[]) {
+app.set('trust proxy', 1);
+app.use(cors({ origin: allowedOrigins?.length ? allowedOrigins : false, methods: ['GET', 'POST'] }));
+app.use(express.json({ limit: '12kb' }));
+
+app.get('/health', (_request, response) => {
+  response.json({
+    status: 'ok',
+    service: 'quill-api',
+    articleContract: articleCacheVersion,
+    openRouterConfigured: Boolean(process.env.OPENROUTER_API_KEY),
+    searxngConfigured: Boolean(process.env.SEARXNG_URL),
+    firecrawlConfigured: Boolean(process.env.FIRECRAWL_API_KEY),
+  });
+});
+
+function sourceCards(pages, quotes) {
   const quoteUrls = new Set(quotes.map(quote => quote.sourceUrl));
-  return pages.filter(page => page && quoteUrls.has(page.url)).map((page: any, index: number) => ({
+  return pages.filter(page => page && quoteUrls.has(page.url)).map((page, index) => ({
     id: `S${index + 1}`,
     title: page.title,
     url: page.url,
@@ -29,7 +47,7 @@ function sourceCards(pages: any[], quotes: any[]) {
   }));
 }
 
-async function gatherEvidence(query: string) {
+async function gatherEvidence(query) {
   const pages = await searchFirecrawl(query);
   if (pages.length === 0) throw new Error('No source results were available.');
 
@@ -44,7 +62,7 @@ async function gatherEvidence(query: string) {
   return { sources, quotes };
 }
 
-function prompts(query: string, sources: any[], quotes: any[]) {
+function prompts(query, sources, quotes) {
   const sourceList = sources.map(source => `[${source.id}] ${source.publisher} | ${source.title} | ${source.url}`).join('\n');
   const evidence = quotes.map(quote => `[${quote.id}] source=${quote.sourceId} | ${quote.authorOrPublisher}\n${quote.verbatimQuote}`).join('\n\n');
   return {
@@ -53,14 +71,14 @@ function prompts(query: string, sources: any[], quotes: any[]) {
   };
 }
 
-async function generateArticle(query: string, sources: any[], quotes: any[]) {
+async function generateArticle(query, sources, quotes) {
   const { system, user } = prompts(query, sources, quotes);
   const errors = [];
   for (const model of [...new Set([PRIMARY_MODEL, FALLBACK_MODEL])]) {
     try {
       const { content, modelUsed } = await createArticleCompletion(system, user, model);
       return { article: validateArticle(content, sources, quotes), modelUsed };
-    } catch (error: any) {
+    } catch (error) {
       errors.push(`${model}: ${error.message}`);
     }
   }
@@ -68,7 +86,7 @@ async function generateArticle(query: string, sources: any[], quotes: any[]) {
   return { article: fallbackArticle(quotes), modelUsed: 'evidence-only-fallback' };
 }
 
-function parseCachedArticle(record: any) {
+function parseCachedArticle(record) {
   try {
     return JSON.parse(record.answerMarkdown);
   } catch {
@@ -76,70 +94,37 @@ function parseCachedArticle(record: any) {
   }
 }
 
-export async function POST(request: NextRequest) {
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    body = {};
-  }
-  
-  const query = typeof body.query === 'string' ? body.query.trim() : '';
-  if (query.length < 3 || query.length > 500) {
-    return Response.json({ error: 'Enter a search question between 3 and 500 characters.' }, { status: 400 });
-  }
-  
-  if (!process.env.OPENROUTER_API_KEY) {
-    return Response.json({ error: 'The Quill server is missing its OpenRouter configuration.' }, { status: 503 });
-  }
+app.post('/api/search', async (request, response) => {
+  const query = typeof request.body?.query === 'string' ? request.body.query.trim() : '';
+  if (query.length < 3 || query.length > 500) return response.status(400).json({ error: 'Enter a search question between 3 and 500 characters.' });
+  if (!process.env.OPENROUTER_API_KEY) return response.status(503).json({ error: 'The Quill server is missing its OpenRouter configuration.' });
 
-  // NextRequest does not have an easy .ip property that works correctly in all environments
-  // In Vercel, x-forwarded-for contains the IP.
-  const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
-  const rate = consume(ip, rateLimit, rateWindowMs);
+  const rate = consume(request.ip, rateLimit, rateWindowMs);
   if (!rate.allowed) {
-    return Response.json({ error: 'Search limit reached. Please try again later.' }, { 
-      status: 429,
-      headers: {
-        'Retry-After': String(Math.ceil(rate.retryAfterMs / 1000)),
-        'X-RateLimit-Remaining': String(rate.remaining)
-      }
-    });
+    response.setHeader('Retry-After', String(Math.ceil(rate.retryAfterMs / 1000)));
+    return response.status(429).json({ error: 'Search limit reached. Please try again later.' });
   }
+  response.setHeader('X-RateLimit-Remaining', String(rate.remaining));
 
   const cacheKey = `${articleCacheVersion}:${cache.normalizeQuery(query)}`;
   const memoryHit = cache.get(cacheKey);
   const persistentHit = memoryHit || await readCache(cacheKey);
   if (persistentHit) {
     const article = parseCachedArticle(persistentHit);
-    if (article) {
-      return Response.json({ 
-        sources: persistentHit.sources, 
-        quotes: persistentHit.quotes, 
-        article, 
-        cached: true, 
-        modelUsed: persistentHit.modelUsed 
-      }, {
-        headers: { 'X-RateLimit-Remaining': String(rate.remaining) }
-      });
-    }
+    if (article) return response.json({ sources: persistentHit.sources, quotes: persistentHit.quotes, article, cached: true, modelUsed: persistentHit.modelUsed });
   }
 
   try {
-    // We mock the express request object for optionalUser since it uses .get('authorization')
-    const authReq = { get: (headerName: string) => request.headers.get(headerName) };
-    const [user, evidence] = await Promise.all([optionalUser(authReq), gatherEvidence(query)]);
+    const [user, evidence] = await Promise.all([optionalUser(request), gatherEvidence(query)]);
     const { sources, quotes } = evidence;
     const { article, modelUsed } = await generateArticle(query, sources, quotes);
-    
     const record = { cacheKey, query, answerMarkdown: JSON.stringify(article), sources, quotes, modelUsed, expiresAt: Date.now() + cacheTtlMs, userId: user?.uid };
     cache.set(cacheKey, record, cacheTtlMs);
     void saveSearch(record);
-    
-    return Response.json({ sources, quotes, article, cached: false, modelUsed }, {
-      headers: { 'X-RateLimit-Remaining': String(rate.remaining) }
-    });
-  } catch (error: any) {
-    return Response.json({ error: `Quill could not assemble enough readable evidence for this question. ${error.message}` }, { status: 422 });
+    return response.json({ sources, quotes, article, cached: false, modelUsed });
+  } catch (error) {
+    return response.status(422).json({ error: `Quill could not assemble enough readable evidence for this question. ${error.message}` });
   }
-}
+});
+
+app.listen(port, () => console.log(`Quill API listening on ${port}`));
