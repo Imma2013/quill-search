@@ -16,6 +16,12 @@ function validateIds(values, allowed, maximum) {
   return ids.length === values.length && ids.every(id => allowed.has(id)) ? ids : null;
 }
 
+function validateOptionalIds(values, allowed, maximum) {
+  if (!Array.isArray(values) || values.length > maximum) return null;
+  const ids = [...new Set(values.filter(value => typeof value === 'string'))];
+  return ids.length === values.length && ids.every(id => allowed.has(id)) ? ids : null;
+}
+
 function validateArticle(content, sources, quotes) {
   const parsed = parseArticleJson(content);
   const sourceIds = new Set(sources.map(source => source.id));
@@ -32,7 +38,7 @@ function validateArticle(content, sources, quotes) {
       if (!text || !evidenceSourceIds) throw new Error('The answer model returned an uncited claim.');
       return { text, sourceIds: evidenceSourceIds };
     });
-    const evidenceQuoteIds = section.quoteIds === undefined ? [] : validateIds(section.quoteIds, quoteIds, 2);
+    const evidenceQuoteIds = section.quoteIds === undefined ? [] : validateOptionalIds(section.quoteIds, quoteIds, 2);
     if (evidenceQuoteIds === null) throw new Error('The answer model referenced an unavailable quote.');
     return { heading, paragraphs, quoteIds: evidenceQuoteIds };
   });

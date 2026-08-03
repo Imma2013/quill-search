@@ -13,6 +13,10 @@ test('accepts a cited evidence article with stored quote references', () => {
       heading: 'A focused mobile experience',
       paragraphs: [{ text: 'The early product centered on taking a photo, improving it, and sharing it quickly.', sourceIds: ['S1'] }],
       quoteIds: ['Q1'],
+    }, {
+      heading: 'Why it mattered',
+      paragraphs: [{ text: 'That product focus made the service easier to understand than a broader set of competing tools.', sourceIds: ['S1', 'S2'] }],
+      quoteIds: [],
     }],
   }), sources, quotes);
   assert.equal(article.sections[0].quoteIds[0], 'Q1');
