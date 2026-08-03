@@ -6,3 +6,39 @@
   - Environments: .env.local
 
    Creating an optimized production build ...
+ ⚠ Compiled with warnings
+
+../../node_modules/convex/dist/cjs/browser/simple_client-node.js
+Module not found: Can't resolve 'utf-8-validate' in '/home/lloydebnchenge/quill/node_modules/convex/dist/cjs/browser'
+
+Import trace for requested module:
+../../node_modules/convex/dist/cjs/browser/simple_client-node.js
+../../node_modules/convex/dist/cjs/browser/index-node.js
+./src/lib/backend/persistence.js
+./src/app/api/search/route.ts
+
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/6) ...
+   Generating static pages (1/6) 
+   Generating static pages (2/6) 
+   Generating static pages (4/6) 
+ ✓ Generating static pages (6/6)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                              Size     First Load JS
+┌ ○ /                                    37.8 kB         125 kB
+├ ○ /_not-found                          876 B          88.2 kB
+├ ƒ /api/search                          0 B                0 B
+└ ○ /icon.svg                            0 B                0 B
++ First Load JS shared by all            87.3 kB
+  ├ chunks/1dd3208c-df09080bcd1d4819.js  53.7 kB
+  ├ chunks/528-adcaf854d5c63a83.js       31.7 kB
+  └ other shared chunks (total)          1.91 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

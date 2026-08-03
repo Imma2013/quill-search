@@ -1,0 +1,24 @@
+
+> @quill/web@0.1.0 build
+> next build
+
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+  ▲ Next.js 14.2.35
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+ ⚠ Compiled with warnings
+
+../../node_modules/convex/dist/cjs/browser/simple_client-node.js
+Module not found: Can't resolve 'utf-8-validate' in '/home/lloydebnchenge/quill/node_modules/convex/dist/cjs/browser'
+
+Import trace for requested module:
+../../node_modules/convex/dist/cjs/browser/simple_client-node.js
+../../node_modules/convex/dist/cjs/browser/index-node.js
+./src/lib/backend/persistence.js
+./src/app/api/search/route.ts
+
