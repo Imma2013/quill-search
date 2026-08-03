@@ -6,7 +6,7 @@ const quote = v.object({ id: v.string(), sourceId: v.string(), verbatimQuote: v.
 const capability = v.string();
 
 function requireCapability(value: string) {
-  if (!process.env.CONVEX_SEARCH_TOKEN || value !== process.env.CONVEX_SEARCH_TOKEN) throw new Error('Unauthorized search persistence request.');
+  if (!process.env.QUILL_API_TOKEN || value !== process.env.QUILL_API_TOKEN) throw new Error('Unauthorized search persistence request.');
 }
 
 export const findCachedSearch = query({

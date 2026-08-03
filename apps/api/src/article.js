@@ -55,7 +55,7 @@ function fallbackArticle(quotes) {
     intro: 'Quill found relevant source evidence, but could not safely turn it into a complete synthesis. The excerpts below are the clearest material to review directly.',
     sections: [{
       heading: 'What the sources say',
-      paragraphs: [{ text: 'Start with these direct excerpts from the sources used for this search.', sourceIds: secondQuote ? [firstQuote.sourceId, secondQuote.sourceId] : [firstQuote.sourceId] }],
+      paragraphs: [{ text: 'Start with these direct excerpts from the sources used for this search.', sourceIds: [...new Set(secondQuote ? [firstQuote.sourceId, secondQuote.sourceId] : [firstQuote.sourceId])] }],
       quoteIds: secondQuote ? [firstQuote.id, secondQuote.id] : [firstQuote.id],
     }],
   };

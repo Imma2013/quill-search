@@ -17,6 +17,12 @@ function fallbackFavicon(sourceUrl) {
   }
 }
 
+const queryStopWords = new Set(['about', 'after', 'also', 'among', 'and', 'are', 'been', 'being', 'between', 'but', 'did', 'does', 'doing', 'early', 'for', 'from', 'have', 'how', 'into', 'itself', 'its', 'like', 'more', 'other', 'than', 'that', 'the', 'their', 'them', 'then', 'these', 'they', 'this', 'those', 'through', 'was', 'were', 'what', 'when', 'where', 'which', 'while', 'who', 'why', 'with', 'would']);
+
+function queryTerms(query) {
+  return [...new Set(query.toLowerCase().split(/\W+/).filter(term => term.length > 2 && !queryStopWords.has(term)))];
+}
+
 function isSafePublicUrl(sourceUrl) {
   try {
     const parsed = new URL(sourceUrl);
@@ -125,7 +131,8 @@ function sentenceCandidates(paragraph) {
 }
 
 function rankQuotes(query, pages) {
-  const terms = query.toLowerCase().split(/\W+/).filter(term => term.length > 2);
+  const terms = queryTerms(query);
+  const minimumTermHits = terms.length > 3 ? 2 : 1;
   const candidates = [];
   for (const page of pages.filter(Boolean)) {
     for (const text of page.paragraphs) {
@@ -133,22 +140,23 @@ function rankQuotes(query, pages) {
       for (const excerpt of sentenceCandidates(text)) {
         const lower = excerpt.toLowerCase();
         const termHits = terms.filter(term => lower.includes(term)).length;
+        if (termHits < minimumTermHits) continue;
         const quoteSignal = /[“"]/u.test(excerpt) || /\b(said|told|recalled|according to|stated)\b/i.test(excerpt);
-        const score = Math.min(100, 28 + termHits * 14 + (quoteSignal ? 18 : 0) + (/\d/.test(excerpt) ? 8 : 0) + (/\b[A-Z][a-z]+ [A-Z][a-z]+\b/.test(excerpt) ? 6 : 0));
+        const score = Math.min(100, 20 + termHits * 18 + (quoteSignal ? 18 : 0) + (/\d/.test(excerpt) ? 8 : 0) + (/\b[A-Z][a-z]+ [A-Z][a-z]+\b/.test(excerpt) ? 6 : 0));
         if (score >= 50) candidates.push({ verbatimQuote: excerpt, sourceUrl: page.url, authorOrPublisher: page.publisher || page.domain, qualityScore: score });
       }
     }
   }
-  const seen = new Set();
+  const seen = [];
   const sourceCounts = new Map();
   return candidates.sort((left, right) => right.qualityScore - left.qualityScore).filter(candidate => {
     const key = candidate.verbatimQuote.toLowerCase();
     const count = sourceCounts.get(candidate.sourceUrl) || 0;
-    if (seen.has(key) || count >= 2) return false;
-    seen.add(key);
+    if (seen.some(previous => previous.includes(key) || key.includes(previous)) || count >= 2) return false;
+    seen.push(key);
     sourceCounts.set(candidate.sourceUrl, count + 1);
     return true;
   }).slice(0, 6).map((quote, index) => ({ ...quote, id: `Q${index + 1}` }));
 }
 
-module.exports = { extractDomain, extractPage, fallbackFavicon, isSafePublicUrl, rankQuotes, searchSearxng, sentenceCandidates };
+module.exports = { extractDomain, extractPage, fallbackFavicon, isSafePublicUrl, queryTerms, rankQuotes, searchSearxng, sentenceCandidates };

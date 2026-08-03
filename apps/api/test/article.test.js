@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const { validateArticle } = require('../src/article');
-const { sentenceCandidates } = require('../src/source');
+const { queryTerms, rankQuotes, sentenceCandidates } = require('../src/source');
 
 const sources = [{ id: 'S1', publisher: 'TechCrunch' }, { id: 'S2', publisher: 'The New York Times' }];
 const quotes = [{ id: 'Q1', sourceId: 'S1' }, { id: 'Q2', sourceId: 'S2' }];
@@ -38,4 +38,15 @@ test('splits long source paragraphs into readable quote candidates', () => {
   const candidates = sentenceCandidates('Instagram made photo sharing faster on the iPhone. Its early filter tools gave ordinary snapshots a more polished look before users posted them to friends.');
   assert.ok(candidates.every(candidate => candidate.length <= 360));
   assert.ok(candidates.length >= 1);
+});
+
+test('does not treat question stop words as topical evidence', () => {
+  const quotes = rankQuotes('What did Instagram do to differentiate itself from early photo-sharing apps?', [{
+    url: 'https://example.com/did',
+    domain: 'example.com',
+    publisher: 'Example',
+    paragraphs: ['The fifth edition diagnoses DID according to criteria under code 300. 14 and describes how the condition presents.'],
+  }]);
+  assert.deepEqual(queryTerms('What did Instagram do to differentiate itself from early photo-sharing apps?'), ['instagram', 'differentiate', 'photo', 'sharing', 'apps']);
+  assert.equal(quotes.length, 0);
 });

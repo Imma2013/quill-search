@@ -17,7 +17,7 @@ const cacheTtlMs = Number(process.env.SEARCH_CACHE_TTL_MS || 21600000);
 const rateLimit = Number(process.env.SEARCH_RATE_LIMIT || 12);
 const rateWindowMs = Number(process.env.SEARCH_RATE_WINDOW_MS || 3600000);
 const allowedOrigins = process.env.ALLOWED_ORIGIN?.split(',').map(origin => origin.trim()).filter(Boolean);
-const articleCacheVersion = 'article-v2';
+const articleCacheVersion = 'article-v3';
 
 app.set('trust proxy', 1);
 app.use(cors({ origin: allowedOrigins?.length ? allowedOrigins : false, methods: ['GET', 'POST'] }));
