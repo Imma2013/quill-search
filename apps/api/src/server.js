@@ -15,9 +15,10 @@ const port = Number(process.env.PORT || 10000);
 const cacheTtlMs = Number(process.env.SEARCH_CACHE_TTL_MS || 21600000);
 const rateLimit = Number(process.env.SEARCH_RATE_LIMIT || 12);
 const rateWindowMs = Number(process.env.SEARCH_RATE_WINDOW_MS || 3600000);
+const allowedOrigins = process.env.ALLOWED_ORIGIN?.split(',').map(origin => origin.trim()).filter(Boolean);
 
 app.set('trust proxy', 1);
-app.use(cors({ origin: process.env.ALLOWED_ORIGIN?.split(',') || true, methods: ['GET', 'POST'] }));
+app.use(cors({ origin: allowedOrigins?.length ? allowedOrigins : false, methods: ['GET', 'POST'] }));
 app.use(express.json({ limit: '12kb' }));
 
 app.get('/health', (_request, response) => {
