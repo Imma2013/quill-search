@@ -4,7 +4,6 @@ use_default_settings:
       - bing
       - brave
       - mojeek
-      - qwant
       - startpage
 
 general:
@@ -21,7 +20,7 @@ search:
 
 server:
   secret_key: "ultrasecretkey"
-  limiter: false
+  limiter: true
   image_proxy: false
 
 engines:
@@ -29,5 +28,7 @@ engines:
     disabled: false
   - name: mojeek
     disabled: false
-  - name: qwant
+  - name: startpage
+    disabled: false
+  - name: brave
     disabled: false

@@ -18,7 +18,7 @@ RUN git clone --depth 1 https://github.com/searxng/searxng.git /opt/searxng \
 WORKDIR /opt/quill/apps/api
 
 COPY apps/api/package.json ./
-RUN npm install --omit=dev
+RUN npm install --omit=dev && npx playwright install --with-deps chromium
 
 COPY apps/api/src ./src
 COPY infra/searxng/settings.yml /etc/searxng/settings.yml
