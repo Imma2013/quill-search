@@ -159,4 +159,38 @@ function rankQuotes(query, pages) {
   }).slice(0, 6).map((quote, index) => ({ ...quote, id: `Q${index + 1}` }));
 }
 
-module.exports = { extractDomain, extractPage, fallbackFavicon, isSafePublicUrl, queryTerms, rankQuotes, searchSearxng, sentenceCandidates };
+async function searchFirecrawl(query) {
+  const apiKey = process.env.FIRECRAWL_API_KEY || 'fc-8e1e7eaf4d5b4102be4fe88c62c72872';
+  try {
+    const response = await fetch("https://api.firecrawl.dev/v2/search", {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        query,
+        limit: 5,
+        scrapeOptions: { onlyMainContent: true, formats: ["markdown"] }
+      })
+    });
+    const data = await response.json();
+    if (!data.success || !Array.isArray(data.data?.web)) return [];
+    
+    return data.data.web.map(item => ({
+      url: item.url,
+      title: item.title,
+      domain: extractDomain(item.url),
+      publisher: item.metadata?.ogSiteName || extractDomain(item.url),
+      faviconUrl: fallbackFavicon(item.url),
+      paragraphs: String(item.markdown || item.description || '').split(/\n{2,}/)
+        .map(text => text.replace(/\s+/g, ' ').trim())
+        .filter(text => text.length >= 50 && text.length <= 900).slice(0, 20)
+    }));
+  } catch (error) {
+    console.error('Firecrawl error:', error);
+    return [];
+  }
+}
+
+module.exports = { extractDomain, extractPage, fallbackFavicon, isSafePublicUrl, queryTerms, rankQuotes, searchSearxng, sentenceCandidates, searchFirecrawl };

@@ -5,7 +5,7 @@ require('dotenv').config();
 const { fallbackArticle, validateArticle } = require('./article');
 const cache = require('./cache');
 const { optionalUser } = require('./auth');
-const { extractDomain, extractPage, fallbackFavicon, isSafePublicUrl, rankQuotes, searchSearxng } = require('./source');
+const { extractDomain, extractPage, fallbackFavicon, isSafePublicUrl, rankQuotes, searchSearxng, searchFirecrawl } = require('./source');
 const { queryDuckDuckGoMcp, extractWithPlaywright } = require('./fallbacks');
 const { FALLBACK_MODEL, PRIMARY_MODEL, createArticleCompletion } = require('./openrouter');
 const { readCache, saveSearch } = require('./persistence');
@@ -50,38 +50,16 @@ function sourceCards(pages, quotes) {
 }
 
 async function gatherEvidence(query) {
-  let results = [];
-  try {
-    results = await searchSearxng(query, process.env.SEARXNG_URL);
-  } catch (error) {
-    console.warn('SearXNG search failed:', error.message);
-  }
-  if (results.length < 3) {
-    const fallback = await queryDuckDuckGoMcp(query);
-    const known = new Set(results.map(result => result.url));
-    results = [...results, ...fallback.filter(result => result.url && isSafePublicUrl(result.url) && !known.has(result.url))].slice(0, 8);
-  }
-  if (results.length === 0) throw new Error('No source results were available.');
+  const pages = await searchFirecrawl(query);
+  if (pages.length === 0) throw new Error('No source results were available.');
 
-  const pages = await Promise.all(results.slice(0, 5).map(async result => {
-    const staticPage = await extractPage(result.url, result.title);
-    if (staticPage?.paragraphs.length) return staticPage;
-    const rendered = await extractWithPlaywright(result.url);
-    if (!rendered?.text) return staticPage;
-    return {
-      url: result.url,
-      title: rendered.title || staticPage?.title || result.title,
-      domain: extractDomain(result.url),
-      publisher: staticPage?.publisher || extractDomain(result.url),
-      faviconUrl: staticPage?.faviconUrl || fallbackFavicon(result.url),
-      paragraphs: String(rendered.text).split(/\n{2,}/).map(text => text.trim()).filter(text => text.length >= 50 && text.length <= 900).slice(0, 20),
-    };
-  }));
   const rankedQuotes = rankQuotes(query, pages);
   if (!rankedQuotes.length) throw new Error('The sources did not contain enough readable evidence to quote.');
+  
   const sources = sourceCards(pages, rankedQuotes);
   const sourceIdByUrl = new Map(sources.map(source => [source.url, source.id]));
   const quotes = rankedQuotes.filter(quote => sourceIdByUrl.has(quote.sourceUrl)).map(quote => ({ ...quote, sourceId: sourceIdByUrl.get(quote.sourceUrl) }));
+  
   if (!sources.length || !quotes.length) throw new Error('The available sources did not contain enough attributable evidence.');
   return { sources, quotes };
 }
