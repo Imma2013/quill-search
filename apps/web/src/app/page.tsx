@@ -5,7 +5,7 @@ import Header from '@/components/Header';
 import SearchForm from '@/components/SearchForm';
 import { Answer, Sources } from '@/components/Answer';
 import { auth } from '@/lib/firebase';
-import type { SearchMetadata } from '@/lib/types';
+import type { EvidenceArticle, SearchMetadata, SearchResponse } from '@/lib/types';
 
 const examples = [
   'What did Instagram do to differentiate itself from early photo-sharing apps?',
@@ -15,46 +15,27 @@ const examples = [
 
 export default function Home() {
   const [query, setQuery] = useState('');
-  const [answer, setAnswer] = useState('');
+  const [article, setArticle] = useState<EvidenceArticle | null>(null);
   const [metadata, setMetadata] = useState<SearchMetadata>({ sources: [], quotes: [], cached: false });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
   const search = async (nextQuery: string) => {
     setQuery(nextQuery);
-    setAnswer('');
+    setArticle(null);
     setMetadata({ sources: [], quotes: [], cached: false });
     setError('');
     setBusy(true);
     try {
       const token = auth?.currentUser ? await auth.currentUser.getIdToken() : null;
       const response = await fetch('/api/search', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ query: nextQuery }) });
-      if (!response.ok || !response.body) {
+      if (!response.ok) {
         const failure = await response.json().catch(() => ({ error: 'Search could not start.' }));
         throw new Error(failure.error || 'Search could not start.');
       }
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      let metadataRead = false;
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        if (!metadataRead) {
-          const divider = buffer.indexOf('\n---META---\n');
-          if (divider === -1) continue;
-          const metadataText = buffer.slice(0, divider);
-          const parsed = JSON.parse(metadataText) as SearchMetadata;
-          setMetadata(parsed);
-          buffer = buffer.slice(divider + '\n---META---\n'.length);
-          metadataRead = true;
-        }
-        if (metadataRead && buffer) {
-          setAnswer(current => current + buffer);
-          buffer = '';
-        }
-      }
+      const payload = await response.json() as SearchResponse;
+      setMetadata({ sources: payload.sources, quotes: payload.quotes, cached: payload.cached, modelUsed: payload.modelUsed });
+      setArticle(payload.article);
     } catch (searchError) {
       setError(searchError instanceof Error ? searchError.message : 'Search failed.');
     } finally {
@@ -80,8 +61,7 @@ export default function Home() {
         <h1 className="font-serif text-3xl font-bold tracking-tight text-slate-950 md:text-4xl">{query}</h1>
       </div>
       {error ? <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-red-800">{error}</div> : <>
-        <Sources sources={metadata.sources} />
-        {answer ? <Answer markdown={answer} quotes={metadata.quotes} /> : <div className="rounded-2xl border border-stone-200 bg-white p-8 text-slate-500">{busy ? 'Quill is gathering source evidence…' : 'No answer returned.'}</div>}
+        {article ? <><Answer article={article} quotes={metadata.quotes} sources={metadata.sources} /><Sources sources={metadata.sources} /></> : <div className="mx-auto max-w-3xl py-14 text-lg text-slate-500">{busy ? 'Quill is gathering source evidence…' : 'No answer returned.'}</div>}
       </>}
     </section>}
   </main>;
