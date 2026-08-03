@@ -15,13 +15,12 @@ RUN git clone --depth 1 https://github.com/searxng/searxng.git /opt/searxng \
   && /opt/searxng/.venv/bin/pip install --no-cache-dir --upgrade pip \
   && /opt/searxng/.venv/bin/pip install --no-cache-dir -r /opt/searxng/requirements.txt gunicorn
 
-WORKDIR /opt/quill
+WORKDIR /opt/quill/apps/api
 
-COPY package.json package-lock.json ./
-COPY apps/api/package.json apps/api/package.json
-RUN npm ci --workspace @quill/api --omit=dev
+COPY apps/api/package.json ./
+RUN npm install --omit=dev
 
-COPY apps/api/src apps/api/src
+COPY apps/api/src ./src
 COPY infra/searxng/settings.yml /etc/searxng/settings.yml
 COPY infra/searxng/start.sh /usr/local/bin/quill-start
 
