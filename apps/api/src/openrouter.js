@@ -11,7 +11,7 @@ async function createArticleCompletion(systemPrompt, userPrompt, model) {
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers,
-    body: JSON.stringify({ model, stream: false, temperature: 0.2, max_tokens: 1800, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }] }),
+    body: JSON.stringify({ model, stream: false, temperature: 0.2, max_tokens: 2800, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }] }),
   });
   if (!response.ok) throw new Error(`The answer model returned ${response.status}.`);
   const payload = await response.json();

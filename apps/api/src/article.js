@@ -1,6 +1,16 @@
 function parseArticleJson(content) {
   const trimmed = String(content || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
-  return JSON.parse(trimmed);
+  try {
+    return JSON.parse(trimmed);
+  } catch (error) {
+    const repairs = ['}]}]}', ']}]}', '}]}', '}]', '"]}]}', '"]}];}'];
+    for (const repair of repairs) {
+      try {
+        return JSON.parse(trimmed + repair);
+      } catch (e) {}
+    }
+    throw error;
+  }
 }
 
 function cleanText(value, minimum, maximum) {
