@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { fallbackArticle, validateArticle } from '@/lib/backend/article';
 import cache from '@/lib/backend/cache';
 import { optionalUser } from '@/lib/backend/auth';
-import { fallbackFavicon, rankQuotes, searchFirecrawl } from '@/lib/backend/source';
+import { fallbackFavicon, rankQuotes, searchTavily } from '@/lib/backend/source';
 import { FALLBACK_MODEL, PRIMARY_MODEL, createArticleCompletion } from '@/lib/backend/openrouter';
 import { readCache, saveSearch } from '@/lib/backend/persistence';
 import { consume } from '@/lib/backend/rate-limit';
@@ -30,7 +30,7 @@ function sourceCards(pages: any[], quotes: any[]) {
 }
 
 async function gatherEvidence(query: string) {
-  const pages = await searchFirecrawl(query);
+  const pages = await searchTavily(query);
   if (pages.length === 0) throw new Error('No source results were available.');
 
   const rankedQuotes = rankQuotes(query, pages);

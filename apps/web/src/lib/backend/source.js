@@ -68,38 +68,39 @@ function rankQuotes(query, pages) {
   }).slice(0, 6).map((quote, index) => ({ ...quote, id: `Q${index + 1}` }));
 }
 
-async function searchFirecrawl(query) {
-  const apiKey = process.env.FIRECRAWL_API_KEY || 'fc-8e1e7eaf4d5b4102be4fe88c62c72872';
+async function searchTavily(query) {
+  const apiKey = process.env.TAVILY_API_KEY || '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';
   try {
-    const response = await fetch("https://api.firecrawl.dev/v2/search", {
+    const response = await fetch("https://api.tavily.com/search", {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        query,
-        limit: 5,
-        scrapeOptions: { onlyMainContent: true, formats: ["markdown"] }
+        api_key: apiKey,
+        query: query,
+        search_depth: "advanced",
+        include_raw_content: true,
+        max_results: 5
       })
     });
     const data = await response.json();
-    if (!data.success || !Array.isArray(data.data?.web)) return [];
+    if (!data.results) return [];
     
-    return data.data.web.map(item => ({
+    return data.results.map(item => ({
       url: item.url,
       title: item.title,
       domain: extractDomain(item.url),
-      publisher: item.metadata?.ogSiteName || extractDomain(item.url),
+      publisher: extractDomain(item.url),
       faviconUrl: fallbackFavicon(item.url),
-      paragraphs: String(item.markdown || item.description || '').split(/\n{2,}/)
+      paragraphs: String(item.raw_content || item.content || '').split(/\n{2,}/)
         .map(text => text.replace(/\s+/g, ' ').trim())
         .filter(text => text.length >= 50 && text.length <= 900).slice(0, 20)
     }));
   } catch (error) {
-    console.error('Firecrawl error:', error);
+    console.error('Tavily error:', error);
     return [];
   }
 }
 
-module.exports = { extractDomain, fallbackFavicon, queryTerms, rankQuotes, sentenceCandidates, searchFirecrawl };
+module.exports = { extractDomain, fallbackFavicon, queryTerms, rankQuotes, sentenceCandidates, searchTavily };
