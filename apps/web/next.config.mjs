@@ -13,7 +13,6 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   experimental: {
-    outputFileTracingRoot: path.join(__dirname, '../../'),
     outputFileTracingExcludes: {
       '*': [
         '../../apps/api/**/*',
