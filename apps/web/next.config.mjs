@@ -14,6 +14,14 @@ const nextConfig = {
   },
   experimental: {
     outputFileTracingRoot: path.join(__dirname, '../../'),
+    outputFileTracingExcludes: {
+      '*': [
+        '../../apps/api/**/*',
+        '../../apps/api/node_modules/**/*',
+        'node_modules/playwright/**/*',
+        'node_modules/puppeteer/**/*'
+      ],
+    },
   },
 };
 
