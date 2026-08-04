@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "bufferutil": "^4.1.0",
-    "convex": "^1.43.0",
     "firebase": "^10.14.1",
     "firebase-admin": "^13.0.2",
     "lucide-react": "^0.468.0",
