@@ -1,5 +1,5 @@
-export const PRIMARY_MODEL = process.env.PRIMARY_MODEL || 'meta-llama/llama-3.1-8b-instruct';
-export const FALLBACK_MODEL = process.env.FALLBACK_MODEL || 'google/gemma-2-9b-it';
+export const PRIMARY_MODEL = process.env.PRIMARY_MODEL || 'openai/gpt-oss-20b:free';
+export const FALLBACK_MODEL = process.env.FALLBACK_MODEL || 'openai/gpt-oss-20b:free';
 
 export async function createArticleCompletion(systemPrompt, userPrompt, model) {
   const headers = {
