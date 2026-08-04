@@ -79,8 +79,8 @@ async function searchTavily(query) {
       body: JSON.stringify({
         api_key: apiKey,
         query: query,
-        search_depth: "advanced",
-        include_raw_content: true,
+        search_depth: "basic",
+        include_raw_content: false,
         max_results: 5
       })
     });
