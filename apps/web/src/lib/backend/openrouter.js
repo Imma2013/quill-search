@@ -1,7 +1,7 @@
-const PRIMARY_MODEL = process.env.OPENROUTER_PRIMARY_MODEL || 'meta-llama/llama-3.1-8b-instruct:free';
-const FALLBACK_MODEL = process.env.OPENROUTER_FALLBACK_MODEL || 'google/gemma-2-9b-it:free';
+export const PRIMARY_MODEL = process.env.PRIMARY_MODEL || 'meta-llama/llama-3.1-8b-instruct';
+export const FALLBACK_MODEL = process.env.FALLBACK_MODEL || 'google/gemma-2-9b-it';
 
-async function createArticleCompletion(systemPrompt, userPrompt, model) {
+export async function createArticleCompletion(systemPrompt, userPrompt, model) {
   const headers = {
     Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
     'Content-Type': 'application/json',
@@ -20,4 +20,4 @@ async function createArticleCompletion(systemPrompt, userPrompt, model) {
   return { content, modelUsed: model };
 }
 
-module.exports = { FALLBACK_MODEL, PRIMARY_MODEL, createArticleCompletion };
+
