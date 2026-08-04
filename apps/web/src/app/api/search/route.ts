@@ -41,28 +41,40 @@ async function gatherEvidence(query: string) {
   const quotes = rankedQuotes.filter(quote => sourceIdByUrl.has(quote.sourceUrl)).map(quote => ({ ...quote, sourceId: sourceIdByUrl.get(quote.sourceUrl) }));
   
   if (!sources.length || !quotes.length) throw new Error('The available sources did not contain enough attributable evidence.');
-  return { sources, quotes };
+  
+  // Return the full pages mapped to their source IDs so the AI can read them
+  const validPages = pages.filter(page => sourceIdByUrl.has(page.url)).map(page => ({
+    ...page,
+    id: sourceIdByUrl.get(page.url)
+  }));
+  
+  return { sources, quotes, pages: validPages };
 }
 
-function prompts(query: string, sources: any[], quotes: any[]) {
+function prompts(query: string, sources: any[], quotes: any[], pages: any[]) {
   const sourceList = sources.map(source => `[${source.id}] ${source.publisher} | ${source.title} | ${source.url}`).join('\n');
   const evidence = quotes.map(quote => `[${quote.id}] source=${quote.sourceId} | ${quote.authorOrPublisher}\n${quote.verbatimQuote}`).join('\n\n');
+  
+  // Combine all the scraped paragraphs for the AI to read
+  const fullText = pages.map(page => `--- SOURCE ${page.id} ---\n${page.paragraphs.join(' ')}`).join('\n\n');
+  
   return {
     system: `You are Quill, an elite evidence-first search journalist. Write in a flowing, narrative style like a feature article in a premium magazine.
 CRITICAL INSTRUCTIONS:
 1. DO NOT use bullet points, numbered lists, or standard AI-like formatting. Write in cohesive paragraphs.
-2. Seamlessly weave short quotes into your sentences (e.g. Steve Jobs protected his focus, famously stating that "innovation came from saying no.")
-3. Only use quoteIds (blockquotes) for exceptionally powerful, standalone statements.
-4. Never invent details, dates, claims, or quotations.
+2. Read the provided Full Source Text to synthesize a highly accurate, academic-level answer.
+3. Seamlessly weave short quotes into your sentences (e.g. Steve Jobs protected his focus, famously stating that "innovation came from saying no.")
+4. Only use quoteIds (blockquotes) for exceptionally powerful, standalone statements.
+5. Never invent details, dates, claims, or quotations.
 
 Return valid JSON only, without Markdown or code fences, matching exactly this shape: {"intro":"...","sections":[{"heading":"...","paragraphs":[{"text":"...","sourceIds":["S1"]}],"quoteIds":["Q1"]}]}. 
-The intro needs a direct answer. Use 2 to 4 meaningful sections. Each paragraph must be supported by one to three source IDs. Quote IDs only point to excerpts already supplied.`,
-    user: `Question: ${query}\n\nSources:\n${sourceList}\n\nExact evidence excerpts:\n${evidence}\n\nWrite the JSON article.`,
+The intro needs a direct answer. Use 2 to 4 meaningful sections. Each paragraph must be supported by one to three source IDs. Quote IDs only point to excerpts already supplied in Key Quotes.`,
+    user: `Question: ${query}\n\nSources:\n${sourceList}\n\nFull Source Text (Read this to synthesize):\n${fullText}\n\nKey Quotes (Use these IDs for blockquotes):\n${evidence}\n\nWrite the JSON article.`,
   };
 }
 
-async function generateArticle(query: string, sources: any[], quotes: any[]) {
-  const { system, user } = prompts(query, sources, quotes);
+async function generateArticle(query: string, sources: any[], quotes: any[], pages: any[]) {
+  const { system, user } = prompts(query, sources, quotes, pages);
   const errors = [];
   for (const model of [PRIMARY_MODEL, FALLBACK_MODEL].filter((v, i, a) => a.indexOf(v) === i)) {
     try {
@@ -137,8 +149,8 @@ export async function POST(request: NextRequest) {
     // We mock the express request object for optionalUser since it uses .get('authorization')
     const authReq = { get: (headerName: string) => request.headers.get(headerName) };
     const [user, evidence] = await Promise.all([optionalUser(authReq), gatherEvidence(query)]);
-    const { sources, quotes } = evidence;
-    const { article, modelUsed } = await generateArticle(query, sources, quotes);
+    const { sources, quotes, pages } = evidence;
+    const { article, modelUsed } = await generateArticle(query, sources, quotes, pages);
     
     const record = { cacheKey, query, answerMarkdown: JSON.stringify(article), sources, quotes, modelUsed, expiresAt: Date.now() + cacheTtlMs, userId: user?.uid };
     cache.set(cacheKey, record, cacheTtlMs);
