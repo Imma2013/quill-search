@@ -1,5 +1,5 @@
-const PRIMARY_MODEL = process.env.OPENROUTER_PRIMARY_MODEL || 'openai/gpt-oss-20b:free';
-const FALLBACK_MODEL = process.env.OPENROUTER_FALLBACK_MODEL || 'google/gemma-4-26b-a4b-it:free';
+const PRIMARY_MODEL = process.env.OPENROUTER_PRIMARY_MODEL || 'meta-llama/llama-3.1-8b-instruct:free';
+const FALLBACK_MODEL = process.env.OPENROUTER_FALLBACK_MODEL || 'google/gemma-2-9b-it:free';
 
 async function createArticleCompletion(systemPrompt, userPrompt, model) {
   const headers = {

@@ -73,9 +73,7 @@ async function searchTavily(query) {
   try {
     const response = await fetch("https://api.tavily.com/search", {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         api_key: apiKey,
         query: query,
@@ -87,16 +85,39 @@ async function searchTavily(query) {
     const data = await response.json();
     if (!data.results) return [];
     
-    return data.results.map(item => ({
-      url: item.url,
-      title: item.title,
-      domain: extractDomain(item.url),
-      publisher: extractDomain(item.url),
-      faviconUrl: fallbackFavicon(item.url),
-      paragraphs: String(item.raw_content || item.content || '').split(/\n{2,}/)
-        .map(text => text.replace(/\s+/g, ' ').trim())
-        .filter(text => text.length >= 50 && text.length <= 900).slice(0, 20)
+    // Custom Scrape Phase: Fetch raw HTML for the top results concurrently
+    const scrapedResults = await Promise.all(data.results.map(async (item) => {
+      let fullText = item.content || '';
+      try {
+        const fetchRes = await fetch(item.url, { signal: AbortSignal.timeout(3500) });
+        if (fetchRes.ok) {
+          const html = await fetchRes.text();
+          const body = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)?.[1] || html;
+          fullText = body
+            .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
+            .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/&[a-z]+;/gi, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        }
+      } catch (err) {
+        console.warn(`Failed to custom scrape ${item.url}:`, err.message);
+      }
+      
+      return {
+        url: item.url,
+        title: item.title,
+        domain: extractDomain(item.url),
+        publisher: extractDomain(item.url),
+        faviconUrl: fallbackFavicon(item.url),
+        paragraphs: fullText.split(/(?<=\.)\s+/)
+          .filter(text => text.length >= 50 && text.length <= 900)
+          .slice(0, 30) // Take up to 30 sentences/paragraphs from the scraped text
+      };
     }));
+    
+    return scrapedResults;
   } catch (error) {
     console.error('Tavily error:', error);
     return [];
